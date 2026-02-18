@@ -1,0 +1,1572 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PitchStat - Soccer Analytics</title>
+<style>
+  :root {
+    --green: #1a5c2a;
+    --green-light: #2d7a3e;
+    --green-dark: #0f3a1a;
+    --pitch-green: #2e7d32;
+    --pitch-light: #388e3c;
+    --white: #ffffff;
+    --gray-100: #f5f5f5;
+    --gray-200: #eeeeee;
+    --gray-300: #e0e0e0;
+    --gray-400: #bdbdbd;
+    --gray-600: #757575;
+    --gray-800: #424242;
+    --yellow: #ffc107;
+    --red: #f44336;
+    --blue: #1976d2;
+    --orange: #ff5722;
+    --shadow: 0 2px 8px rgba(0,0,0,0.15);
+    --shadow-lg: 0 4px 20px rgba(0,0,0,0.25);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    background: #0d1b0f;
+    color: #e0e0e0;
+    min-height: 100vh;
+  }
+
+  /* ── HEADER ── */
+  header {
+    background: linear-gradient(135deg, #0f3a1a 0%, #1a5c2a 100%);
+    padding: 12px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 2px solid #2d7a3e;
+    box-shadow: var(--shadow-lg);
+  }
+  header h1 { font-size: 1.6rem; font-weight: 800; letter-spacing: 2px; color: #fff; }
+  header h1 span { color: #4caf50; }
+  #match-clock {
+    font-size: 2rem; font-weight: 900; color: #4caf50;
+    font-variant-numeric: tabular-nums; letter-spacing: 3px;
+    background: rgba(0,0,0,0.3); padding: 4px 16px; border-radius: 8px;
+  }
+  #match-score { font-size: 1.2rem; color: #fff; text-align: right; }
+  #match-score span { font-size: 0.85rem; color: #aaa; display: block; }
+
+  /* ── SCREENS ── */
+  .screen { display: none; padding: 20px; max-width: 1600px; margin: 0 auto; }
+  .screen.active { display: block; }
+
+  /* ── SETUP SCREEN ── */
+  .setup-card {
+    background: #1a2e1d;
+    border-radius: 16px;
+    padding: 32px;
+    max-width: 900px;
+    margin: 0 auto;
+    border: 1px solid #2d7a3e;
+    box-shadow: var(--shadow-lg);
+  }
+  .setup-card h2 { font-size: 1.4rem; margin-bottom: 24px; color: #4caf50; text-align: center; }
+
+  .team-section { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 24px; }
+
+  .form-group { margin-bottom: 16px; }
+  .form-group label { display: block; font-size: 0.85rem; color: #aaa; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 1px; }
+  .form-group input, .form-group select {
+    width: 100%; padding: 10px 14px;
+    background: #0d1b0f; border: 1px solid #2d7a3e;
+    border-radius: 8px; color: #fff; font-size: 0.95rem;
+  }
+  .form-group input:focus, .form-group select:focus { outline: none; border-color: #4caf50; }
+
+  .players-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+  .player-input { display: flex; align-items: center; gap: 6px; }
+  .player-num { width: 28px; height: 28px; background: #2d7a3e; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; font-weight: 700; color: #fff; flex-shrink: 0; }
+
+  .bench-section { margin-top: 20px; }
+  .bench-section h3 { font-size: 0.9rem; color: #4caf50; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 1px; }
+  .bench-list { display: flex; flex-direction: column; gap: 8px; }
+  .bench-item { display: flex; align-items: center; gap: 8px; }
+  .bench-item input { flex: 1; }
+  .btn-icon {
+    width: 32px; height: 32px; border: none; border-radius: 6px;
+    cursor: pointer; font-size: 1.1rem; display: flex; align-items: center; justify-content: center;
+  }
+  .btn-add { background: #2d7a3e; color: #fff; }
+  .btn-remove { background: #c62828; color: #fff; }
+
+  .btn {
+    padding: 12px 28px; border: none; border-radius: 10px;
+    font-size: 1rem; font-weight: 700; cursor: pointer;
+    transition: all 0.2s; letter-spacing: 1px;
+  }
+  .btn-primary { background: linear-gradient(135deg, #2d7a3e, #4caf50); color: #fff; }
+  .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 4px 15px rgba(76,175,80,0.4); }
+  .btn-danger { background: linear-gradient(135deg, #c62828, #f44336); color: #fff; }
+  .btn-danger:hover { transform: translateY(-2px); }
+  .btn-warning { background: linear-gradient(135deg, #e65100, #ff5722); color: #fff; }
+  .btn-warning:hover { transform: translateY(-2px); }
+  .btn-info { background: linear-gradient(135deg, #0d47a1, #1976d2); color: #fff; }
+  .btn-secondary { background: #37474f; color: #fff; }
+  .btn-secondary:hover { background: #455a64; }
+  .btn-sm { padding: 6px 14px; font-size: 0.82rem; }
+
+  .setup-actions { display: flex; justify-content: center; gap: 16px; margin-top: 28px; }
+
+  /* ── MATCH SCREEN ── */
+  #screen-match { display: none; }
+  #screen-match.active { display: grid; grid-template-columns: 1fr 300px; gap: 16px; align-items: start; }
+
+  .pitch-section { display: flex; flex-direction: column; gap: 12px; }
+
+  /* PITCH CONTROLS */
+  .match-controls {
+    display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+    background: #1a2e1d; padding: 12px 16px; border-radius: 12px;
+    border: 1px solid #2d7a3e;
+  }
+  .match-controls .btn { padding: 8px 18px; font-size: 0.9rem; }
+  .half-badge {
+    background: rgba(76,175,80,0.2); border: 1px solid #4caf50;
+    padding: 4px 12px; border-radius: 20px; font-size: 0.85rem; color: #4caf50; margin-left: auto;
+  }
+
+  /* PITCH */
+  .pitch-wrapper {
+    position: relative;
+    background: #1a2e1d;
+    border-radius: 12px;
+    border: 1px solid #2d7a3e;
+    overflow: hidden;
+    padding: 12px;
+  }
+  #pitch-svg {
+    width: 100%;
+    aspect-ratio: 105/68;
+    display: block;
+    cursor: crosshair;
+  }
+
+  /* Player tokens on pitch */
+  .player-token {
+    position: absolute;
+    width: 40px; height: 40px;
+    border-radius: 50%;
+    background: #1565c0;
+    border: 3px solid #fff;
+    display: flex; align-items: center; justify-content: center;
+    flex-direction: column;
+    cursor: pointer;
+    transform: translate(-50%, -50%);
+    transition: all 0.2s;
+    z-index: 10;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.5);
+    user-select: none;
+  }
+  .player-token:hover { transform: translate(-50%, -50%) scale(1.15); box-shadow: 0 4px 15px rgba(255,255,255,0.3); }
+  .player-token .p-num { font-size: 0.65rem; font-weight: 900; color: #fff; line-height: 1; }
+  .player-token .p-name { font-size: 0.45rem; color: #ddd; line-height: 1; text-align: center; max-width: 38px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .player-token.card-yellow { border-color: #ffc107; background: #5d4037; }
+  .player-token.card-red { border-color: #f44336; background: #7f0000; opacity: 0.7; pointer-events: none; }
+
+  /* ── EVENT POPUP ── */
+  #event-popup {
+    display: none;
+    position: fixed; top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    background: #1a2e1d;
+    border: 2px solid #4caf50;
+    border-radius: 16px;
+    padding: 20px;
+    z-index: 1000;
+    min-width: 280px;
+    box-shadow: var(--shadow-lg);
+  }
+  #event-popup h3 { font-size: 1rem; color: #4caf50; margin-bottom: 14px; text-align: center; }
+  #event-popup h3 span { color: #fff; }
+  .event-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .event-btn {
+    padding: 10px 8px; border: 1px solid #2d7a3e; border-radius: 8px;
+    background: #0d1b0f; color: #fff; font-size: 0.8rem; font-weight: 600;
+    cursor: pointer; transition: all 0.15s; text-align: center; line-height: 1.3;
+  }
+  .event-btn:hover { background: #2d7a3e; border-color: #4caf50; transform: scale(1.03); }
+  .event-btn.goal { background: #1b5e20; border-color: #4caf50; color: #69f0ae; }
+  .event-btn.card-y { background: #4a3000; border-color: #ffc107; color: #ffc107; }
+  .event-btn.card-r { background: #3e0000; border-color: #f44336; color: #f44336; }
+  .event-btn.assist { background: #0d2b4a; border-color: #1976d2; color: #64b5f6; }
+  .event-btn.cancel { background: #37474f; border-color: #546e7a; color: #ccc; grid-column: span 2; }
+  #popup-overlay {
+    display: none; position: fixed; inset: 0;
+    background: rgba(0,0,0,0.6); z-index: 999;
+  }
+
+  /* ── SUBSTITUTION POPUP ── */
+  #sub-popup {
+    display: none;
+    position: fixed; top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    background: #1a2e1d; border: 2px solid #ff5722;
+    border-radius: 16px; padding: 24px; z-index: 1000;
+    min-width: 320px; box-shadow: var(--shadow-lg);
+  }
+  #sub-popup h3 { font-size: 1rem; color: #ff5722; margin-bottom: 16px; text-align: center; }
+  .sub-select { width: 100%; padding: 9px 12px; background: #0d1b0f; border: 1px solid #2d7a3e; border-radius: 8px; color: #fff; margin-bottom: 12px; font-size: 0.9rem; }
+  .sub-actions { display: flex; gap: 10px; justify-content: center; margin-top: 16px; }
+
+  /* ── SIDEBAR ── */
+  .sidebar { display: flex; flex-direction: column; gap: 12px; }
+
+  .stat-card {
+    background: #1a2e1d; border-radius: 12px;
+    border: 1px solid #2d7a3e; padding: 16px;
+  }
+  .stat-card h3 { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 1px; color: #4caf50; margin-bottom: 12px; }
+
+  .stat-row { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; border-bottom: 1px solid #0d1b0f; }
+  .stat-row:last-child { border-bottom: none; }
+  .stat-label { font-size: 0.85rem; color: #aaa; }
+  .stat-value { font-size: 1rem; font-weight: 700; color: #fff; }
+  .stat-value.highlight { color: #4caf50; }
+
+  .poss-bar { background: #0d1b0f; border-radius: 4px; height: 6px; overflow: hidden; margin-top: 6px; }
+  .poss-fill { height: 100%; background: linear-gradient(90deg, #4caf50, #2d7a3e); border-radius: 4px; transition: width 0.5s; }
+
+  .event-log { max-height: 200px; overflow-y: auto; }
+  .log-entry { font-size: 0.78rem; padding: 5px 0; border-bottom: 1px solid #0d1b0f; display: flex; gap: 8px; align-items: center; }
+  .log-time { color: #4caf50; font-weight: 700; min-width: 36px; }
+  .log-icon { font-size: 1rem; }
+  .log-text { color: #ccc; }
+
+  /* ── BENCH PANEL ── */
+  .bench-panel { background: #1a2e1d; border-radius: 12px; border: 1px solid #2d7a3e; padding: 12px; }
+  .bench-panel h3 { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 1px; color: #ff5722; margin-bottom: 10px; }
+  .bench-player { display: flex; align-items: center; justify-content: space-between; padding: 5px 0; border-bottom: 1px solid #0d1b0f; font-size: 0.82rem; }
+  .bench-player:last-child { border-bottom: none; }
+  .bench-player span { color: #ccc; }
+  .btn-sub { padding: 3px 8px; font-size: 0.72rem; background: #e65100; border: none; border-radius: 5px; color: #fff; cursor: pointer; font-weight: 600; }
+  .btn-sub:hover { background: #ff5722; }
+
+  /* ── SUMMARY SCREEN ── */
+  #screen-summary { display: none; }
+  #screen-summary.active { display: block; max-width: 1200px; margin: 0 auto; }
+
+  .summary-header {
+    text-align: center; margin-bottom: 24px;
+    background: #1a2e1d; padding: 20px; border-radius: 12px;
+    border: 1px solid #2d7a3e;
+  }
+  .summary-header h2 { font-size: 1.6rem; color: #4caf50; margin-bottom: 8px; }
+  .summary-header .score-big { font-size: 3rem; font-weight: 900; color: #fff; letter-spacing: 8px; }
+
+  .stats-table-wrap { background: #1a2e1d; border-radius: 12px; border: 1px solid #2d7a3e; overflow: hidden; margin-bottom: 20px; }
+  .stats-table-wrap h3 { font-size: 0.9rem; text-transform: uppercase; letter-spacing: 1px; color: #4caf50; padding: 14px 16px; border-bottom: 1px solid #2d7a3e; }
+
+  table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
+  th { background: #0d1b0f; color: #4caf50; padding: 10px 10px; text-align: center; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.5px; position: sticky; top: 0; }
+  th:first-child { text-align: left; padding-left: 16px; }
+  td { padding: 9px 10px; text-align: center; border-bottom: 1px solid #0d1b0f; color: #ccc; }
+  td:first-child { text-align: left; padding-left: 16px; color: #fff; font-weight: 600; }
+  tr:hover td { background: rgba(76,175,80,0.05); }
+  tr.total-row td { background: #0d2e14; color: #4caf50; font-weight: 700; border-top: 2px solid #2d7a3e; }
+
+  .events-table-wrap { background: #1a2e1d; border-radius: 12px; border: 1px solid #2d7a3e; overflow: hidden; margin-bottom: 20px; }
+  .events-table-wrap h3 { font-size: 0.9rem; text-transform: uppercase; letter-spacing: 1px; color: #4caf50; padding: 14px 16px; border-bottom: 1px solid #2d7a3e; }
+  .summary-actions { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+
+  /* ── NOTIFICATION TOAST ── */
+  #toast {
+    position: fixed; bottom: 24px; right: 24px;
+    background: #2d7a3e; color: #fff;
+    padding: 12px 20px; border-radius: 10px;
+    font-size: 0.9rem; font-weight: 600;
+    transform: translateX(200px); opacity: 0;
+    transition: all 0.3s; z-index: 2000;
+    box-shadow: var(--shadow-lg);
+  }
+  #toast.show { transform: translateX(0); opacity: 1; }
+  #toast.warn { background: #c62828; }
+
+  /* ── HALFTIME MODAL ── */
+  #halftime-modal {
+    display: none; position: fixed; inset: 0;
+    background: rgba(0,0,0,0.8); z-index: 1100;
+    align-items: center; justify-content: center;
+  }
+  #halftime-modal.show { display: flex; }
+  .halftime-box {
+    background: #1a2e1d; border: 2px solid #4caf50;
+    border-radius: 16px; padding: 32px; text-align: center;
+    box-shadow: var(--shadow-lg); min-width: 320px;
+  }
+  .halftime-box h2 { font-size: 1.8rem; color: #4caf50; margin-bottom: 8px; }
+  .halftime-box .ht-score { font-size: 2.5rem; font-weight: 900; color: #fff; margin: 12px 0; }
+  .halftime-box p { color: #aaa; margin-bottom: 20px; }
+
+  /* ── WATER BREAK MODAL ── */
+  #water-modal {
+    display: none; position: fixed; inset: 0;
+    background: rgba(0,0,0,0.8); z-index: 1100;
+    align-items: center; justify-content: center;
+  }
+  #water-modal.show { display: flex; }
+  .water-box {
+    background: #0d2b4a; border: 2px solid #1976d2;
+    border-radius: 16px; padding: 32px; text-align: center;
+    box-shadow: var(--shadow-lg); min-width: 320px;
+  }
+  .water-box h2 { font-size: 1.8rem; color: #64b5f6; margin-bottom: 8px; }
+  .water-box p { color: #90caf9; margin-bottom: 20px; }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: #0d1b0f; }
+  ::-webkit-scrollbar-thumb { background: #2d7a3e; border-radius: 3px; }
+
+  @media (max-width: 900px) {
+    #screen-match.active { grid-template-columns: 1fr; }
+    .team-section { grid-template-columns: 1fr; }
+    .sidebar { flex-direction: row; flex-wrap: wrap; }
+    .stat-card { flex: 1 1 200px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header>
+  <h1>Pitch<span>Stat</span></h1>
+  <div id="match-clock">00:00</div>
+  <div id="match-score">
+    <span id="score-label">Score</span>
+    <div style="display:flex;align-items:center;gap:10px;">
+      <span id="score-display">— : —</span>
+      <div style="display:flex;flex-direction:column;gap:4px;">
+        <button onclick="oppGoal(1)" title="Add opponent goal"
+          style="width:26px;height:26px;background:#c62828;border:none;border-radius:5px;color:#fff;font-size:1rem;font-weight:900;cursor:pointer;line-height:1;">+</button>
+        <button onclick="oppGoal(-1)" title="Remove opponent goal"
+          style="width:26px;height:26px;background:#37474f;border:none;border-radius:5px;color:#ccc;font-size:1rem;font-weight:900;cursor:pointer;line-height:1;">−</button>
+      </div>
+    </div>
+    <span style="font-size:0.7rem;color:#e57373;display:block;text-align:right;">opp goals →</span>
+  </div>
+</header>
+
+<!-- ══ SCREEN: SETUP ══ -->
+<div id="screen-setup" class="screen active">
+  <div class="setup-card">
+    <h2>⚽ Match Setup</h2>
+
+    <div class="team-section">
+      <!-- MY TEAM -->
+      <div>
+        <div class="form-group">
+          <label>My Team Name</label>
+          <input type="text" id="my-team-name" placeholder="e.g. Madeirense" value="Madeirense">
+        </div>
+        <div class="form-group">
+          <label>Formation</label>
+          <select id="my-formation">
+            <option value="4-4-2">4-4-2</option>
+            <option value="4-3-3">4-3-3</option>
+            <option value="4-2-3-1">4-2-3-1</option>
+            <option value="3-5-2">3-5-2</option>
+            <option value="5-3-2">5-3-2</option>
+            <option value="4-5-1">4-5-1</option>
+            <option value="3-4-3">3-4-3</option>
+            <option value="custom">Custom</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Starting 11</label>
+          <div class="players-grid" id="my-players-grid"></div>
+        </div>
+        <div class="bench-section">
+          <h3>Bench <span style="color:#aaa;font-size:0.75rem;">(0–9 players)</span></h3>
+          <div class="bench-list" id="bench-list"></div>
+          <button class="btn btn-secondary btn-sm" style="margin-top:8px;" onclick="addBenchPlayer()">+ Add Bench Player</button>
+        </div>
+      </div>
+
+      <!-- OPPONENT -->
+      <div>
+        <div class="form-group">
+          <label>Opponent Team Name</label>
+          <input type="text" id="opp-team-name" placeholder="e.g. Sporting" value="Sporting">
+        </div>
+        <div class="form-group" style="background:#1a2e1d;padding:12px;border-radius:8px;border:1px solid #2d7a3e;">
+          <p style="font-size:0.82rem;color:#aaa;">Only your team stats are tracked in detail. Opponent score is updated automatically when you record a goal against you.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="setup-actions">
+      <button class="btn btn-primary" onclick="startMatch()">⚽ Start Match</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ SCREEN: MATCH ══ -->
+<div id="screen-match" class="screen">
+
+  <!-- LEFT: PITCH + CONTROLS -->
+  <div class="pitch-section">
+
+    <div class="match-controls">
+      <button class="btn btn-primary" id="btn-start-pause" onclick="toggleTimer()">▶ Start</button>
+      <button class="btn btn-warning" onclick="requestWaterBreak()">💧 Water Break</button>
+      <button class="btn btn-info" onclick="requestHalfTime()">🔁 Half Time</button>
+      <button class="btn btn-danger" id="btn-finish" onclick="finishGame()" style="display:none;">🏁 Finish Game</button>
+      <button class="btn btn-secondary btn-sm" onclick="openSubPopup()">🔄 Sub</button>
+      <div class="half-badge" id="half-badge">1st Half</div>
+    </div>
+
+    <div class="pitch-wrapper">
+      <!-- SVG PITCH -->
+      <svg id="pitch-svg" viewBox="0 0 105 68" xmlns="http://www.w3.org/2000/svg">
+        <!-- Pitch background -->
+        <rect width="105" height="68" fill="#2e7d32"/>
+        <!-- Alternating stripes -->
+        <rect x="0" y="0" width="10.5" height="68" fill="#2d7a3e"/>
+        <rect x="21" y="0" width="10.5" height="68" fill="#2d7a3e"/>
+        <rect x="42" y="0" width="10.5" height="68" fill="#2d7a3e"/>
+        <rect x="63" y="0" width="10.5" height="68" fill="#2d7a3e"/>
+        <rect x="84" y="0" width="10.5" height="68" fill="#2d7a3e"/>
+
+        <!-- Outer boundary -->
+        <rect x="0" y="0" width="105" height="68" fill="none" stroke="rgba(255,255,255,0.9)" stroke-width="0.5"/>
+
+        <!-- Centre line -->
+        <line x1="52.5" y1="0" x2="52.5" y2="68" stroke="rgba(255,255,255,0.9)" stroke-width="0.5"/>
+
+        <!-- Centre circle -->
+        <circle cx="52.5" cy="34" r="9.15" fill="none" stroke="rgba(255,255,255,0.9)" stroke-width="0.5"/>
+        <circle cx="52.5" cy="34" r="0.5" fill="rgba(255,255,255,0.9)"/>
+
+        <!-- LEFT Penalty Area (16.5m box) -->
+        <rect x="0" y="13.84" width="16.5" height="40.32" fill="none" stroke="rgba(255,255,255,0.9)" stroke-width="0.5"/>
+        <!-- LEFT Goal Area (5.5m box) -->
+        <rect x="0" y="24.84" width="5.5" height="18.32" fill="none" stroke="rgba(255,255,255,0.9)" stroke-width="0.5"/>
+        <!-- LEFT Goal -->
+        <rect x="-2" y="29.68" width="2" height="8.64" fill="#999" stroke="rgba(255,255,255,0.9)" stroke-width="0.5"/>
+        <!-- LEFT Penalty spot -->
+        <circle cx="11" cy="34" r="0.4" fill="rgba(255,255,255,0.9)"/>
+        <!-- LEFT Penalty arc -->
+        <path d="M 16.5 27.5 A 9.15 9.15 0 0 1 16.5 40.5" fill="none" stroke="rgba(255,255,255,0.9)" stroke-width="0.5"/>
+
+        <!-- RIGHT Penalty Area -->
+        <rect x="88.5" y="13.84" width="16.5" height="40.32" fill="none" stroke="rgba(255,255,255,0.9)" stroke-width="0.5"/>
+        <!-- RIGHT Goal Area -->
+        <rect x="99.5" y="24.84" width="5.5" height="18.32" fill="none" stroke="rgba(255,255,255,0.9)" stroke-width="0.5"/>
+        <!-- RIGHT Goal -->
+        <rect x="105" y="29.68" width="2" height="8.64" fill="#999" stroke="rgba(255,255,255,0.9)" stroke-width="0.5"/>
+        <!-- RIGHT Penalty spot -->
+        <circle cx="94" cy="34" r="0.4" fill="rgba(255,255,255,0.9)"/>
+        <!-- RIGHT Penalty arc -->
+        <path d="M 88.5 27.5 A 9.15 9.15 0 0 0 88.5 40.5" fill="none" stroke="rgba(255,255,255,0.9)" stroke-width="0.5"/>
+
+        <!-- Corner arcs -->
+        <path d="M 0 1.5 A 1.5 1.5 0 0 1 1.5 0" fill="none" stroke="rgba(255,255,255,0.9)" stroke-width="0.5"/>
+        <path d="M 103.5 0 A 1.5 1.5 0 0 1 105 1.5" fill="none" stroke="rgba(255,255,255,0.9)" stroke-width="0.5"/>
+        <path d="M 105 66.5 A 1.5 1.5 0 0 1 103.5 68" fill="none" stroke="rgba(255,255,255,0.9)" stroke-width="0.5"/>
+        <path d="M 1.5 68 A 1.5 1.5 0 0 1 0 66.5" fill="none" stroke="rgba(255,255,255,0.9)" stroke-width="0.5"/>
+      </svg>
+
+      <!-- Player tokens rendered absolutely over the SVG wrapper -->
+      <div id="player-tokens-layer" style="position:absolute;inset:12px;pointer-events:none;"></div>
+    </div>
+
+  </div>
+
+  <!-- RIGHT: SIDEBAR -->
+  <div class="sidebar">
+
+    <div class="stat-card">
+      <h3>Live Stats — <span id="sidebar-team-name" style="color:#fff;text-transform:none;">Team</span></h3>
+      <div class="stat-row"><span class="stat-label">Possession</span><span class="stat-value highlight" id="stat-poss">—</span></div>
+      <div class="poss-bar"><div class="poss-fill" id="poss-fill" style="width:50%"></div></div>
+      <div class="stat-row"><span class="stat-label">Goals</span><span class="stat-value" id="stat-goals">0</span></div>
+      <div class="stat-row"><span class="stat-label">Total Shots</span><span class="stat-value" id="stat-shots">0</span></div>
+      <div class="stat-row"><span class="stat-label">Shots on Target</span><span class="stat-value" id="stat-sot">0</span></div>
+      <div class="stat-row"><span class="stat-label">Pass Accuracy</span><span class="stat-value" id="stat-pass-acc">—</span></div>
+      <div class="stat-row"><span class="stat-label">Fouls</span><span class="stat-value" id="stat-fouls">0</span></div>
+      <div class="stat-row"><span class="stat-label">Yellow Cards</span><span class="stat-value" id="stat-yc">0</span></div>
+      <div class="stat-row"><span class="stat-label">Red Cards</span><span class="stat-value" id="stat-rc">0</span></div>
+    </div>
+
+    <div class="stat-card bench-panel">
+      <h3>Bench</h3>
+      <div id="sidebar-bench"></div>
+    </div>
+
+    <div class="stat-card">
+      <h3>Event Log</h3>
+      <div class="event-log" id="event-log"></div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ══ SCREEN: SUMMARY ══ -->
+<div id="screen-summary" class="screen">
+  <div class="summary-header">
+    <h2>Match Summary</h2>
+    <div class="score-big" id="summary-score">0 : 0</div>
+    <div id="summary-teams" style="font-size:1.1rem;color:#aaa;"></div>
+    <div id="summary-duration" style="font-size:0.9rem;color:#666;margin-top:6px;"></div>
+  </div>
+
+  <div class="stats-table-wrap">
+    <h3>Player Statistics</h3>
+    <div style="overflow-x:auto;">
+      <table id="player-stats-table">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th style="text-align:left;">Player</th>
+            <th>Min Played</th>
+            <th>Goals</th>
+            <th>Assists</th>
+            <th>Shots</th>
+            <th>On Target</th>
+            <th>Pass ✓</th>
+            <th>Pass ✗</th>
+            <th>Pass%</th>
+            <th>Fouls</th>
+            <th>YC</th>
+            <th>RC</th>
+            <th>Intercept</th>
+            <th>Turnover</th>
+            <th>Offside</th>
+          </tr>
+        </thead>
+        <tbody id="player-stats-body"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="events-table-wrap">
+    <h3>All Events</h3>
+    <div style="overflow-x:auto;">
+      <table id="events-table">
+        <thead>
+          <tr>
+            <th>Time</th>
+            <th style="text-align:left;">Player</th>
+            <th>Event</th>
+            <th>X</th>
+            <th>Y</th>
+          </tr>
+        </thead>
+        <tbody id="events-body"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="summary-actions">
+    <button class="btn btn-primary" onclick="exportTxt()">📄 Export Player Stats (.txt)</button>
+    <button class="btn btn-secondary" onclick="resetAll()">🔄 New Match</button>
+  </div>
+</div>
+
+<!-- ══ EVENT POPUP ══ -->
+<div id="popup-overlay" onclick="closeEventPopup()"></div>
+<div id="event-popup">
+  <h3>Event for <span id="popup-player-name">—</span></h3>
+  <div class="event-grid">
+    <button class="event-btn goal"       onclick="logEvent('Goal')">⚽ Goal</button>
+    <button class="event-btn assist"     onclick="logEvent('Assist')">🎯 Assist</button>
+    <button class="event-btn"            onclick="logEvent('Shot On Target')">🥅 Shot On Target</button>
+    <button class="event-btn"            onclick="logEvent('Shot Off Target')">↗ Shot Off Target</button>
+    <button class="event-btn"            onclick="logEvent('Pass Success')">✅ Pass Success</button>
+    <button class="event-btn"            onclick="logEvent('Pass Fail')">❌ Pass Fail</button>
+    <button class="event-btn"            onclick="logEvent('Interception')">🛡 Interception</button>
+    <button class="event-btn"            onclick="logEvent('Turnover')">↩ Turnover</button>
+    <button class="event-btn"            onclick="logEvent('Foul')">⚠ Foul</button>
+    <button class="event-btn"            onclick="logEvent('Offside')">🚩 Offside</button>
+    <button class="event-btn card-y"     onclick="logEvent('Yellow Card')">🟨 Yellow Card</button>
+    <button class="event-btn card-r"     onclick="logEvent('Red Card')">🟥 Red Card</button>
+    <button class="event-btn cancel"     onclick="closeEventPopup()">✕ Cancel</button>
+  </div>
+</div>
+
+<!-- ══ SUBSTITUTION POPUP ══ -->
+<div id="sub-popup">
+  <h3>🔄 Make Substitution</h3>
+  <label style="font-size:0.82rem;color:#aaa;display:block;margin-bottom:4px;">Player Coming OFF (from pitch)</label>
+  <select class="sub-select" id="sub-off-select"></select>
+  <label style="font-size:0.82rem;color:#aaa;display:block;margin-bottom:4px;">Player Coming ON (from bench)</label>
+  <select class="sub-select" id="sub-on-select"></select>
+  <div class="sub-actions">
+    <button class="btn btn-warning" onclick="confirmSub()">Confirm Sub</button>
+    <button class="btn btn-secondary" onclick="closeSubPopup()">Cancel</button>
+  </div>
+</div>
+
+<!-- ══ HALFTIME MODAL ══ -->
+<div id="halftime-modal">
+  <div class="halftime-box">
+    <h2>⏸ Half Time</h2>
+    <div class="ht-score" id="ht-score-display">0 : 0</div>
+    <p id="ht-stats-summary" style="font-size:0.85rem;"></p>
+    <button class="btn btn-primary" style="margin-top:8px;" onclick="startSecondHalf()">▶ Start 2nd Half</button>
+  </div>
+</div>
+
+<!-- ══ WATER BREAK MODAL ══ -->
+<div id="water-modal">
+  <div class="water-box">
+    <h2>💧 Water Break</h2>
+    <p>Timer paused. Players hydrating.</p>
+    <button class="btn btn-info" onclick="resumeFromWater()">▶ Resume</button>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div id="toast"></div>
+
+<!-- ════════════ JAVASCRIPT ════════════ -->
+<script>
+// ══════════════════════════════════════
+//  STATE
+// ══════════════════════════════════════
+const state = {
+  myTeam: 'Team',
+  oppTeam: 'Opponent',
+  goals: { my: 0, opp: 0 },
+  half: 1,
+  matchFinished: false,
+
+  // Timer
+  timerRunning: false,
+  timerSeconds: 0,
+  timerInterval: null,
+
+  // Players on pitch: [{id, name, num, x, y, yellowCard, redCard}]
+  pitchPlayers: [],
+  // Bench players: [{id, name, num}]
+  benchPlayers: [],
+
+  // All events
+  events: [],
+
+  // Player time tracking: id -> [{in: seconds, out: seconds|null}]
+  playerTime: {},
+
+  // Possession tracking (pass counts)
+  passesMy: 0,
+  passesOpp: 0, // we don't track opp passes, use simple possession model
+
+  // Currently selected player for event
+  selectedPlayer: null,
+  selectedX: 0,
+  selectedY: 0,
+};
+
+// ══════════════════════════════════════
+//  SETUP: Generate player inputs
+// ══════════════════════════════════════
+function initSetup() {
+  const grid = document.getElementById('my-players-grid');
+  grid.innerHTML = '';
+  for (let i = 1; i <= 11; i++) {
+    const defaultNames = ['GK','CB','CB','LB','RB','CM','CM','CAM','LW','RW','ST'];
+    const label = i <= 11 ? defaultNames[i-1] : '';
+    grid.innerHTML += `
+      <div class="player-input">
+        <div class="player-num">${i}</div>
+        <input type="text" id="my-p-${i}" placeholder="${label}" value="${label}">
+      </div>`;
+  }
+}
+initSetup();
+
+let benchCount = 0;
+function addBenchPlayer() {
+  if (benchCount >= 9) { showToast('Max 9 bench players', true); return; }
+  benchCount++;
+  const list = document.getElementById('bench-list');
+  const div = document.createElement('div');
+  div.className = 'bench-item';
+  div.id = `bench-row-${benchCount}`;
+  div.innerHTML = `
+    <div class="player-num">${11 + benchCount}</div>
+    <input type="text" class="form-group" id="bench-p-${benchCount}" placeholder="Bench Player ${benchCount}" style="flex:1;padding:8px 10px;background:#0d1b0f;border:1px solid #2d7a3e;border-radius:8px;color:#fff;">
+    <button class="btn-icon btn-remove" onclick="removeBench(${benchCount})">×</button>`;
+  list.appendChild(div);
+}
+function removeBench(id) {
+  const el = document.getElementById(`bench-row-${id}`);
+  if (el) el.remove();
+}
+
+// ══════════════════════════════════════
+//  START MATCH
+// ══════════════════════════════════════
+function startMatch() {
+  state.myTeam = document.getElementById('my-team-name').value.trim() || 'My Team';
+  state.oppTeam = document.getElementById('opp-team-name').value.trim() || 'Opponent';
+
+  // Collect starting 11
+  state.pitchPlayers = [];
+  state.playerTime = {};
+  for (let i = 1; i <= 11; i++) {
+    const name = (document.getElementById(`my-p-${i}`)?.value || '').trim() || `Player ${i}`;
+    const id = `p${i}`;
+    state.pitchPlayers.push({ id, name, num: i, x: 0, y: 0, yellowCard: false, redCard: false });
+    state.playerTime[id] = [{ in: 0, out: null }];
+  }
+
+  // Collect bench
+  state.benchPlayers = [];
+  let bIdx = 1;
+  while (true) {
+    const el = document.getElementById(`bench-p-${bIdx}`);
+    if (!el) break;
+    const name = el.value.trim() || `Sub ${bIdx}`;
+    const id = `b${bIdx}`;
+    state.benchPlayers.push({ id, name, num: 11 + bIdx });
+    state.playerTime[id] = [];
+    bIdx++;
+  }
+
+  // Set formation positions
+  applyFormation();
+
+  // Update UI
+  document.getElementById('sidebar-team-name').textContent = state.myTeam;
+  document.getElementById('score-label').textContent = `${state.myTeam} vs ${state.oppTeam}`;
+
+  showScreen('match');
+  renderTokens();
+  renderBenchSidebar();
+  updateStats();
+}
+
+// ══════════════════════════════════════
+//  FORMATION POSITIONS
+// ══════════════════════════════════════
+function applyFormation() {
+  const formation = document.getElementById('my-formation').value;
+  const positions = getFormationPositions(formation);
+  for (let i = 0; i < state.pitchPlayers.length; i++) {
+    state.pitchPlayers[i].x = positions[i] ? positions[i].x : 25 + Math.random()*20;
+    state.pitchPlayers[i].y = positions[i] ? positions[i].y : 20 + Math.random()*28;
+  }
+}
+
+function getFormationPositions(formation) {
+  // Pitch is 105x68, team plays left half (attacking right)
+  // GK at left, forwards at right
+  const configs = {
+    '4-4-2': [
+      {x:5,  y:34},   // GK
+      {x:22, y:12},{x:22,y:28},{x:22,y:42},{x:22,y:57},  // DEF
+      {x:42, y:12},{x:42,y:28},{x:42,y:42},{x:42,y:57},  // MID
+      {x:60, y:26},{x:60,y:44},  // FWD
+    ],
+    '4-3-3': [
+      {x:5,  y:34},
+      {x:22, y:12},{x:22,y:28},{x:22,y:42},{x:22,y:57},
+      {x:42, y:20},{x:42,y:34},{x:42,y:50},
+      {x:60, y:14},{x:60,y:34},{x:60,y:54},
+    ],
+    '4-2-3-1': [
+      {x:5,  y:34},
+      {x:22, y:12},{x:22,y:28},{x:22,y:42},{x:22,y:57},
+      {x:38, y:26},{x:38,y:44},
+      {x:52, y:14},{x:52,y:34},{x:52,y:54},
+      {x:64, y:34},
+    ],
+    '3-5-2': [
+      {x:5,  y:34},
+      {x:22, y:20},{x:22,y:34},{x:22,y:50},
+      {x:38, y:10},{x:38,y:24},{x:38,y:36},{x:38,y:50},{x:38,y:62},
+      {x:60, y:26},{x:60,y:44},
+    ],
+    '5-3-2': [
+      {x:5,  y:34},
+      {x:20, y:8},{x:20,y:22},{x:20,y:34},{x:20,y:48},{x:20,y:62},
+      {x:40, y:20},{x:40,y:34},{x:40,y:50},
+      {x:60, y:26},{x:60,y:44},
+    ],
+    '4-5-1': [
+      {x:5,  y:34},
+      {x:22, y:12},{x:22,y:28},{x:22,y:42},{x:22,y:57},
+      {x:42, y:8},{x:42,y:22},{x:42,y:34},{x:42,y:48},{x:42,y:62},
+      {x:62, y:34},
+    ],
+    '3-4-3': [
+      {x:5,  y:34},
+      {x:20, y:18},{x:20,y:34},{x:20,y:52},
+      {x:38, y:12},{x:38,y:28},{x:38,y:44},{x:38,y:60},
+      {x:58, y:14},{x:58,y:34},{x:58,y:54},
+    ],
+    'custom': Array.from({length:11},(_,i)=>({x:15+i*5,y:10+i*5})),
+  };
+  return configs[formation] || configs['4-4-2'];
+}
+
+// ══════════════════════════════════════
+//  RENDER PLAYER TOKENS
+// ══════════════════════════════════════
+function renderTokens() {
+  const layer = document.getElementById('player-tokens-layer');
+  layer.innerHTML = '';
+  const svg = document.getElementById('pitch-svg');
+  const svgRect = svg.getBoundingClientRect();
+  const layerRect = layer.getBoundingClientRect();
+
+  // The SVG viewBox is 0 0 105 68
+  // We need to map SVG coords to layer-relative pixel coords
+  const scaleX = svgRect.width / 105;
+  const scaleY = svgRect.height / 68;
+  const offsetX = svgRect.left - layerRect.left;
+  const offsetY = svgRect.top - layerRect.top;
+
+  state.pitchPlayers.forEach(p => {
+    if (p.redCard) return; // removed from pitch
+    const px = p.x * scaleX + offsetX;
+    const py = p.y * scaleY + offsetY;
+    const tok = document.createElement('div');
+    tok.className = 'player-token' + (p.yellowCard ? ' card-yellow' : '');
+    tok.style.left = px + 'px';
+    tok.style.top = py + 'px';
+    tok.style.pointerEvents = 'all';
+    tok.innerHTML = `<div class="p-num">${p.num}</div><div class="p-name">${p.name.split(' ')[0]}</div>`;
+    tok.addEventListener('click', (e) => {
+      e.stopPropagation();
+      openEventPopup(p, px, py);
+    });
+    // Drag support
+    makeDraggable(tok, p, scaleX, scaleY, offsetX, offsetY);
+    layer.appendChild(tok);
+  });
+}
+
+function makeDraggable(el, player, scaleX, scaleY, offsetX, offsetY) {
+  let dragging = false, startX, startY, moved = false;
+  el.addEventListener('mousedown', (e) => {
+    dragging = true; moved = false;
+    startX = e.clientX; startY = e.clientY;
+    e.preventDefault();
+  });
+  document.addEventListener('mousemove', (e) => {
+    if (!dragging) return;
+    const dx = e.clientX - startX, dy = e.clientY - startY;
+    if (Math.abs(dx)>5||Math.abs(dy)>5) moved = true;
+    if (moved) {
+      el.style.left = (parseFloat(el.style.left)+dx) + 'px';
+      el.style.top  = (parseFloat(el.style.top)+dy)  + 'px';
+      startX = e.clientX; startY = e.clientY;
+      const layer = document.getElementById('player-tokens-layer');
+      const lRect = layer.getBoundingClientRect();
+      player.x = (e.clientX - lRect.left - offsetX) / scaleX;
+      player.y = (e.clientY - lRect.top  - offsetY) / scaleY;
+    }
+  });
+  document.addEventListener('mouseup', () => { dragging = false; });
+}
+
+// ══════════════════════════════════════
+//  BENCH SIDEBAR
+// ══════════════════════════════════════
+function renderBenchSidebar() {
+  const div = document.getElementById('sidebar-bench');
+  if (state.benchPlayers.length === 0) {
+    div.innerHTML = '<div style="font-size:0.8rem;color:#666;">No bench players</div>';
+    return;
+  }
+  div.innerHTML = state.benchPlayers.map(p => `
+    <div class="bench-player">
+      <span>${p.num}. ${p.name}</span>
+      <button class="btn-sub" onclick="quickSub('${p.id}')">⇌ Sub</button>
+    </div>`).join('');
+}
+
+function quickSub(benchId) {
+  // Pre-fill sub popup with this bench player
+  openSubPopup(benchId);
+}
+
+// ══════════════════════════════════════
+//  TIMER
+// ══════════════════════════════════════
+function toggleTimer() {
+  if (state.timerRunning) {
+    pauseTimer();
+  } else {
+    startTimer();
+  }
+}
+function startTimer() {
+  if (state.timerRunning) return;
+  state.timerRunning = true;
+  document.getElementById('btn-start-pause').textContent = '⏸ Pause';
+  state.timerInterval = setInterval(() => {
+    state.timerSeconds++;
+    updateClock();
+  }, 1000);
+}
+function pauseTimer() {
+  state.timerRunning = false;
+  clearInterval(state.timerInterval);
+  document.getElementById('btn-start-pause').textContent = '▶ Resume';
+}
+function updateClock() {
+  const total = state.timerSeconds;
+  const m = Math.floor(total / 60).toString().padStart(2, '0');
+  const s = (total % 60).toString().padStart(2, '0');
+  document.getElementById('match-clock').textContent = `${m}:${s}`;
+}
+function currentMinute() {
+  return Math.floor(state.timerSeconds / 60);
+}
+
+// ══════════════════════════════════════
+//  WATER BREAK
+// ══════════════════════════════════════
+function requestWaterBreak() {
+  pauseTimer();
+  document.getElementById('water-modal').classList.add('show');
+}
+function resumeFromWater() {
+  document.getElementById('water-modal').classList.remove('show');
+  startTimer();
+}
+
+// ══════════════════════════════════════
+//  HALF TIME
+// ══════════════════════════════════════
+function requestHalfTime() {
+  if (state.half !== 1) return;
+  pauseTimer();
+  document.getElementById('ht-score-display').textContent = `${state.goals.my} : ${state.goals.opp}`;
+  // Stats summary
+  const myShots = countEvent('Goal') + countEvent('Shot On Target') + countEvent('Shot Off Target');
+  const myPasses = countEvent('Pass Success') + countEvent('Pass Fail');
+  const passAcc = myPasses > 0 ? Math.round(countEvent('Pass Success') / myPasses * 100) : 0;
+  document.getElementById('ht-stats-summary').textContent =
+    `Shots: ${myShots} | Pass Acc: ${passAcc}% | Fouls: ${countEvent('Foul')}`;
+  document.getElementById('halftime-modal').classList.add('show');
+}
+function startSecondHalf() {
+  document.getElementById('halftime-modal').classList.remove('show');
+  state.half = 2;
+  document.getElementById('half-badge').textContent = '2nd Half';
+  // Show finish button, hide half-time button
+  document.querySelector('[onclick="requestHalfTime()"]').style.display = 'none';
+  document.getElementById('btn-finish').style.display = 'inline-flex';
+  startTimer();
+  showToast('2nd Half started!');
+}
+
+// ══════════════════════════════════════
+//  FINISH GAME
+// ══════════════════════════════════════
+function finishGame() {
+  pauseTimer();
+  // Close out all player times
+  const now = state.timerSeconds;
+  state.pitchPlayers.forEach(p => {
+    const intervals = state.playerTime[p.id];
+    if (intervals && intervals.length > 0) {
+      const last = intervals[intervals.length - 1];
+      if (last.out === null) last.out = now;
+    }
+  });
+  state.matchFinished = true;
+  showSummary();
+}
+
+// ══════════════════════════════════════
+//  EVENT POPUP
+// ══════════════════════════════════════
+function openEventPopup(player, px, py) {
+  state.selectedPlayer = player;
+  // Get SVG-relative coords for recording
+  const svg = document.getElementById('pitch-svg');
+  const svgRect = svg.getBoundingClientRect();
+  // We'll store player.x, player.y which are already SVG coords
+  state.selectedX = Math.round(player.x * 10) / 10;
+  state.selectedY = Math.round(player.y * 10) / 10;
+
+  document.getElementById('popup-player-name').textContent = `${player.num}. ${player.name}`;
+  document.getElementById('event-popup').style.display = 'block';
+  document.getElementById('popup-overlay').style.display = 'block';
+}
+function closeEventPopup() {
+  document.getElementById('event-popup').style.display = 'none';
+  document.getElementById('popup-overlay').style.display = 'none';
+  state.selectedPlayer = null;
+}
+
+function logEvent(type) {
+  if (!state.selectedPlayer) return;
+  const p = state.selectedPlayer;
+  const mins = currentMinute();
+  const secs = state.timerSeconds;
+
+  const ev = {
+    playerId: p.id,
+    playerName: p.name,
+    playerNum: p.num,
+    type,
+    minute: mins,
+    seconds: secs,
+    x: state.selectedX,
+    y: state.selectedY,
+    half: state.half,
+  };
+  state.events.push(ev);
+
+  // Side effects
+  if (type === 'Goal') {
+    state.goals.my++;
+    updateScoreDisplay();
+    showToast(`⚽ GOAL! ${p.name} — ${state.goals.my}:${state.goals.opp}`);
+  } else if (type === 'Yellow Card') {
+    if (p.yellowCard) {
+      // Second yellow = red
+      p.yellowCard = false;
+      p.redCard = true;
+      state.events.push({ ...ev, type: 'Red Card (2nd Yellow)', playerId: p.id, playerName: p.name });
+      showToast(`🟥 2nd Yellow → Red! ${p.name}`, true);
+      removeFromPitch(p.id, secs);
+    } else {
+      p.yellowCard = true;
+      showToast(`🟨 Yellow Card: ${p.name}`);
+    }
+  } else if (type === 'Red Card') {
+    p.redCard = true;
+    showToast(`🟥 Red Card: ${p.name}`, true);
+    removeFromPitch(p.id, secs);
+  } else if (type === 'Pass Success') {
+    state.passesMy++;
+  } else if (type === 'Pass Fail') {
+    // no pass increment
+  }
+
+  addLogEntry(ev);
+  updateStats();
+  renderTokens();
+  closeEventPopup();
+}
+
+function removeFromPitch(playerId, secs) {
+  const intervals = state.playerTime[playerId];
+  if (intervals && intervals.length > 0) {
+    const last = intervals[intervals.length - 1];
+    if (last.out === null) last.out = secs;
+  }
+}
+
+// ══════════════════════════════════════
+//  SUBSTITUTION
+// ══════════════════════════════════════
+function openSubPopup(preSelectBenchId) {
+  const offSel = document.getElementById('sub-off-select');
+  const onSel = document.getElementById('sub-on-select');
+  offSel.innerHTML = state.pitchPlayers
+    .filter(p => !p.redCard)
+    .map(p => `<option value="${p.id}">${p.num}. ${p.name}</option>`).join('');
+  onSel.innerHTML = state.benchPlayers
+    .map(p => `<option value="${p.id}">${p.num}. ${p.name}</option>`).join('');
+  if (state.benchPlayers.length === 0) {
+    showToast('No bench players available', true);
+    return;
+  }
+  if (preSelectBenchId) {
+    onSel.value = preSelectBenchId;
+  }
+  document.getElementById('sub-popup').style.display = 'block';
+  document.getElementById('popup-overlay').style.display = 'block';
+}
+function closeSubPopup() {
+  document.getElementById('sub-popup').style.display = 'none';
+  document.getElementById('popup-overlay').style.display = 'none';
+}
+function confirmSub() {
+  const offId = document.getElementById('sub-off-select').value;
+  const onId  = document.getElementById('sub-on-select').value;
+  if (!offId || !onId) return;
+
+  const offPlayer = state.pitchPlayers.find(p => p.id === offId);
+  const onPlayer  = state.benchPlayers.find(p => p.id === onId);
+  if (!offPlayer || !onPlayer) return;
+
+  const secs = state.timerSeconds;
+  const mins = currentMinute();
+
+  // Record time out for off player
+  removeFromPitch(offId, secs);
+
+  // Record time in for on player
+  if (!state.playerTime[onId]) state.playerTime[onId] = [];
+  state.playerTime[onId].push({ in: secs, out: null });
+
+  // Swap positions
+  onPlayer.x = offPlayer.x;
+  onPlayer.y = offPlayer.y;
+  onPlayer.yellowCard = false;
+  onPlayer.redCard = false;
+
+  // Move onPlayer to pitch, offPlayer to bench
+  state.pitchPlayers = state.pitchPlayers.filter(p => p.id !== offId);
+  state.pitchPlayers.push(onPlayer);
+  state.benchPlayers = state.benchPlayers.filter(p => p.id !== onId);
+  state.benchPlayers.push(offPlayer); // off player goes to bench
+
+  // Log substitution event
+  state.events.push({
+    type: 'Substitution',
+    playerName: `${onPlayer.name} ↔ ${offPlayer.name}`,
+    playerId: onId,
+    playerNum: onPlayer.num,
+    minute: mins,
+    seconds: secs,
+    half: state.half,
+    x: 0, y: 0,
+  });
+
+  showToast(`🔄 Sub: ${onPlayer.name} IN for ${offPlayer.name}`);
+  addLogEntry({ type: 'Substitution', playerName: `${onPlayer.name} IN / ${offPlayer.name} OUT`, minute: mins });
+  closeSubPopup();
+  renderTokens();
+  renderBenchSidebar();
+}
+
+// ══════════════════════════════════════
+//  STATS UPDATE
+// ══════════════════════════════════════
+function countEvent(type) {
+  return state.events.filter(e => e.type === type).length;
+}
+function updateStats() {
+  const goals  = countEvent('Goal');
+  const shots  = goals + countEvent('Shot On Target') + countEvent('Shot Off Target');
+  const sot    = goals + countEvent('Shot On Target');
+  const passOk = countEvent('Pass Success');
+  const passFail = countEvent('Pass Fail');
+  const total  = passOk + passFail;
+  const acc    = total > 0 ? Math.round(passOk / total * 100) : null;
+  const fouls  = countEvent('Foul');
+  const yc     = countEvent('Yellow Card');
+  const rc     = countEvent('Red Card') + countEvent('Red Card (2nd Yellow)');
+
+  // Possession model: based on successful passes ratio (simple heuristic)
+  // We'll use pass count as a proxy; opponent "passes" not tracked so use 50% default adjusted by our passes
+  const myPasses = passOk + passFail;
+  const possRaw = myPasses > 5 ? Math.min(80, Math.max(30, 50 + (passOk - passFail) * 1.5)) : 50;
+  const poss = Math.round(possRaw);
+
+  document.getElementById('stat-goals').textContent = goals;
+  document.getElementById('stat-shots').textContent = shots;
+  document.getElementById('stat-sot').textContent   = sot;
+  document.getElementById('stat-pass-acc').textContent = acc !== null ? `${acc}%` : '—';
+  document.getElementById('stat-fouls').textContent  = fouls;
+  document.getElementById('stat-yc').textContent     = yc;
+  document.getElementById('stat-rc').textContent     = rc;
+  document.getElementById('stat-poss').textContent   = `${poss}%`;
+  document.getElementById('poss-fill').style.width   = `${poss}%`;
+
+  updateScoreDisplay();
+}
+function updateScoreDisplay() {
+  document.getElementById('score-display').textContent = `${state.goals.my} : ${state.goals.opp}`;
+}
+function oppGoal(delta) {
+  state.goals.opp = Math.max(0, state.goals.opp + delta);
+  updateScoreDisplay();
+  if (delta > 0) showToast(`⚽ Opponent goal — ${state.goals.my}:${state.goals.opp}`, true);
+  else showToast(`↩ Opponent goal removed — ${state.goals.my}:${state.goals.opp}`);
+}
+
+// ══════════════════════════════════════
+//  EVENT LOG SIDEBAR
+// ══════════════════════════════════════
+const eventIcons = {
+  'Goal': '⚽', 'Assist': '🎯', 'Shot On Target': '🥅', 'Shot Off Target': '↗',
+  'Pass Success': '✅', 'Pass Fail': '❌', 'Interception': '🛡', 'Turnover': '↩',
+  'Foul': '⚠', 'Yellow Card': '🟨', 'Red Card': '🟥', 'Offside': '🚩',
+  'Substitution': '🔄', 'Red Card (2nd Yellow)': '🟥',
+};
+function addLogEntry(ev) {
+  const log = document.getElementById('event-log');
+  const icon = eventIcons[ev.type] || '•';
+  const div = document.createElement('div');
+  div.className = 'log-entry';
+  div.innerHTML = `<span class="log-time">${ev.minute}'</span><span class="log-icon">${icon}</span><span class="log-text">${ev.playerName} - ${ev.type}</span>`;
+  log.insertBefore(div, log.firstChild);
+}
+
+// ══════════════════════════════════════
+//  SUMMARY
+// ══════════════════════════════════════
+function showSummary() {
+  showScreen('summary');
+  document.getElementById('summary-score').textContent = `${state.goals.my} : ${state.goals.opp}`;
+  document.getElementById('summary-teams').textContent = `${state.myTeam}  vs  ${state.oppTeam}`;
+  const totalSecs = state.timerSeconds;
+  const mm = Math.floor(totalSecs/60), ss = totalSecs%60;
+  document.getElementById('summary-duration').textContent = `Match duration: ${mm}m ${ss}s`;
+
+  // Build player stats
+  const allPlayers = [
+    ...state.pitchPlayers,
+    ...state.benchPlayers,
+    // also any that left the pitch (may be in bench now or were subbed off)
+  ];
+  // Collect all unique player IDs that have time entries or events
+  const allIds = new Set([
+    ...state.pitchPlayers.map(p=>p.id),
+    ...state.benchPlayers.map(p=>p.id),
+    ...state.events.map(e=>e.playerId),
+  ]);
+
+  // Build player map
+  const playerMap = {};
+  [...state.pitchPlayers, ...state.benchPlayers].forEach(p => { playerMap[p.id] = p; });
+  // Some players might only appear in events (e.g. if moved around)
+  state.events.forEach(e => {
+    if (!playerMap[e.playerId]) {
+      playerMap[e.playerId] = { id: e.playerId, name: e.playerName, num: e.playerNum || '?' };
+    }
+  });
+
+  const tbody = document.getElementById('player-stats-body');
+  tbody.innerHTML = '';
+
+  // Totals
+  let totals = { goals:0,assists:0,shots:0,sot:0,passOk:0,passFail:0,fouls:0,yc:0,rc:0,intercept:0,turnover:0,offside:0,mins:0 };
+
+  const rows = [];
+  allIds.forEach(id => {
+    const p = playerMap[id];
+    if (!p) return;
+    const evs = state.events.filter(e => e.playerId === id);
+    const goals   = evs.filter(e=>e.type==='Goal').length;
+    const assists = evs.filter(e=>e.type==='Assist').length;
+    const shots   = evs.filter(e=>['Goal','Shot On Target','Shot Off Target'].includes(e.type)).length;
+    const sot     = evs.filter(e=>['Goal','Shot On Target'].includes(e.type)).length;
+    const passOk  = evs.filter(e=>e.type==='Pass Success').length;
+    const passFail= evs.filter(e=>e.type==='Pass Fail').length;
+    const fouls   = evs.filter(e=>e.type==='Foul').length;
+    const yc      = evs.filter(e=>e.type==='Yellow Card').length;
+    const rc      = evs.filter(e=>['Red Card','Red Card (2nd Yellow)'].includes(e.type)).length;
+    const intercept = evs.filter(e=>e.type==='Interception').length;
+    const turnover  = evs.filter(e=>e.type==='Turnover').length;
+    const offside   = evs.filter(e=>e.type==='Offside').length;
+    const passTotal = passOk + passFail;
+    const passAcc = passTotal > 0 ? Math.round(passOk/passTotal*100)+'%' : '—';
+
+    // Minutes played
+    const intervals = state.playerTime[id] || [];
+    let minsPlayed = 0;
+    intervals.forEach(interval => {
+      const outTime = interval.out !== null ? interval.out : state.timerSeconds;
+      minsPlayed += (outTime - interval.in);
+    });
+    const minsMin = Math.round(minsPlayed / 60);
+
+    totals.goals    += goals;
+    totals.assists  += assists;
+    totals.shots    += shots;
+    totals.sot      += sot;
+    totals.passOk   += passOk;
+    totals.passFail += passFail;
+    totals.fouls    += fouls;
+    totals.yc       += yc;
+    totals.rc       += rc;
+    totals.intercept+= intercept;
+    totals.turnover += turnover;
+    totals.offside  += offside;
+
+    rows.push({ p, goals, assists, shots, sot, passOk, passFail, passAcc, fouls, yc, rc, intercept, turnover, offside, minsMin });
+  });
+
+  // Sort by number
+  rows.sort((a,b) => (a.p.num||99) - (b.p.num||99));
+
+  rows.forEach(r => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${r.p.num}</td>
+      <td>${r.p.name}</td>
+      <td>${r.minsMin}'</td>
+      <td>${r.goals}</td>
+      <td>${r.assists}</td>
+      <td>${r.shots}</td>
+      <td>${r.sot}</td>
+      <td>${r.passOk}</td>
+      <td>${r.passFail}</td>
+      <td>${r.passAcc}</td>
+      <td>${r.fouls}</td>
+      <td>${r.yc}</td>
+      <td>${r.rc}</td>
+      <td>${r.intercept}</td>
+      <td>${r.turnover}</td>
+      <td>${r.offside}</td>`;
+    tbody.appendChild(tr);
+  });
+
+  // Totals row
+  const totalPassTotal = totals.passOk + totals.passFail;
+  const totalPassAcc = totalPassTotal > 0 ? Math.round(totals.passOk/totalPassTotal*100)+'%' : '—';
+  const tr = document.createElement('tr');
+  tr.className = 'total-row';
+  tr.innerHTML = `
+    <td></td>
+    <td>TEAM TOTALS</td>
+    <td>—</td>
+    <td>${totals.goals}</td>
+    <td>${totals.assists}</td>
+    <td>${totals.shots}</td>
+    <td>${totals.sot}</td>
+    <td>${totals.passOk}</td>
+    <td>${totals.passFail}</td>
+    <td>${totalPassAcc}</td>
+    <td>${totals.fouls}</td>
+    <td>${totals.yc}</td>
+    <td>${totals.rc}</td>
+    <td>${totals.intercept}</td>
+    <td>${totals.turnover}</td>
+    <td>${totals.offside}</td>`;
+  tbody.appendChild(tr);
+
+  // Events table
+  const evBody = document.getElementById('events-body');
+  evBody.innerHTML = '';
+  state.events.forEach(ev => {
+    const tr2 = document.createElement('tr');
+    tr2.innerHTML = `
+      <td>${ev.minute}'</td>
+      <td>${ev.playerName}</td>
+      <td>${eventIcons[ev.type]||''} ${ev.type}</td>
+      <td>${ev.x ? ev.x.toFixed(1) : '—'}</td>
+      <td>${ev.y ? ev.y.toFixed(1) : '—'}</td>`;
+    evBody.appendChild(tr2);
+  });
+}
+
+// ══════════════════════════════════════
+//  EXPORT TXT
+// ══════════════════════════════════════
+function exportTxt() {
+  const lines = [];
+  lines.push('═══════════════════════════════════════════════════');
+  lines.push('                  PITCHSTAT MATCH REPORT           ');
+  lines.push('═══════════════════════════════════════════════════');
+  lines.push(`Match: ${state.myTeam} vs ${state.oppTeam}`);
+  lines.push(`Score: ${state.goals.my} - ${state.goals.opp}`);
+  const totalSecs = state.timerSeconds;
+  lines.push(`Duration: ${Math.floor(totalSecs/60)}m ${totalSecs%60}s`);
+  lines.push(`Date: ${new Date().toLocaleDateString()}`);
+  lines.push('');
+  lines.push('───────────────────────────────────────────────────');
+  lines.push('PLAYER STATISTICS');
+  lines.push('───────────────────────────────────────────────────');
+
+  // Header
+  const hdr = [
+    '#'.padEnd(4),
+    'Player'.padEnd(20),
+    'Min'.padEnd(5),
+    'G'.padEnd(4),
+    'A'.padEnd(4),
+    'Sh'.padEnd(4),
+    'SoT'.padEnd(5),
+    'P+'.padEnd(5),
+    'P-'.padEnd(5),
+    'P%'.padEnd(6),
+    'Foul'.padEnd(6),
+    'YC'.padEnd(4),
+    'RC'.padEnd(4),
+    'Int'.padEnd(5),
+    'Turn'.padEnd(6),
+    'OFS',
+  ].join('');
+  lines.push(hdr);
+  lines.push('─'.repeat(hdr.length));
+
+  const allIds = new Set([
+    ...state.pitchPlayers.map(p=>p.id),
+    ...state.benchPlayers.map(p=>p.id),
+    ...state.events.map(e=>e.playerId),
+  ]);
+  const playerMap = {};
+  [...state.pitchPlayers, ...state.benchPlayers].forEach(p => { playerMap[p.id] = p; });
+  state.events.forEach(e => {
+    if (!playerMap[e.playerId]) playerMap[e.playerId] = { id:e.playerId, name:e.playerName, num:e.playerNum||'?' };
+  });
+
+  let totals = { goals:0,assists:0,shots:0,sot:0,passOk:0,passFail:0,fouls:0,yc:0,rc:0,intercept:0,turnover:0,offside:0 };
+  const rows = [];
+  allIds.forEach(id => {
+    const p = playerMap[id];
+    if (!p) return;
+    const evs = state.events.filter(e => e.playerId === id);
+    const goals    = evs.filter(e=>e.type==='Goal').length;
+    const assists  = evs.filter(e=>e.type==='Assist').length;
+    const shots    = evs.filter(e=>['Goal','Shot On Target','Shot Off Target'].includes(e.type)).length;
+    const sot      = evs.filter(e=>['Goal','Shot On Target'].includes(e.type)).length;
+    const passOk   = evs.filter(e=>e.type==='Pass Success').length;
+    const passFail = evs.filter(e=>e.type==='Pass Fail').length;
+    const fouls    = evs.filter(e=>e.type==='Foul').length;
+    const yc       = evs.filter(e=>e.type==='Yellow Card').length;
+    const rc       = evs.filter(e=>['Red Card','Red Card (2nd Yellow)'].includes(e.type)).length;
+    const intercept= evs.filter(e=>e.type==='Interception').length;
+    const turnover = evs.filter(e=>e.type==='Turnover').length;
+    const offside  = evs.filter(e=>e.type==='Offside').length;
+    const passTotal= passOk+passFail;
+    const passAcc  = passTotal > 0 ? Math.round(passOk/passTotal*100)+'%' : '—';
+    const intervals = state.playerTime[id] || [];
+    let secPlayed = 0;
+    intervals.forEach(i => { secPlayed += ((i.out!==null?i.out:state.timerSeconds) - i.in); });
+    const minsMin = Math.round(secPlayed/60);
+
+    totals.goals    += goals;
+    totals.assists  += assists;
+    totals.shots    += shots;
+    totals.sot      += sot;
+    totals.passOk   += passOk;
+    totals.passFail += passFail;
+    totals.fouls    += fouls;
+    totals.yc       += yc;
+    totals.rc       += rc;
+    totals.intercept+= intercept;
+    totals.turnover += turnover;
+    totals.offside  += offside;
+
+    rows.push({ p, goals, assists, shots, sot, passOk, passFail, passAcc, fouls, yc, rc, intercept, turnover, offside, minsMin });
+  });
+  rows.sort((a,b)=>(a.p.num||99)-(b.p.num||99));
+
+  rows.forEach(r => {
+    lines.push([
+      String(r.p.num).padEnd(4),
+      r.p.name.substring(0,19).padEnd(20),
+      String(r.minsMin+"'").padEnd(5),
+      String(r.goals).padEnd(4),
+      String(r.assists).padEnd(4),
+      String(r.shots).padEnd(4),
+      String(r.sot).padEnd(5),
+      String(r.passOk).padEnd(5),
+      String(r.passFail).padEnd(5),
+      r.passAcc.padEnd(6),
+      String(r.fouls).padEnd(6),
+      String(r.yc).padEnd(4),
+      String(r.rc).padEnd(4),
+      String(r.intercept).padEnd(5),
+      String(r.turnover).padEnd(6),
+      String(r.offside),
+    ].join(''));
+  });
+
+  // Totals row
+  lines.push('─'.repeat(hdr.length));
+  const totalPassTotal = totals.passOk+totals.passFail;
+  const totalPassAcc = totalPassTotal>0 ? Math.round(totals.passOk/totalPassTotal*100)+'%' : '—';
+  lines.push([
+    ''.padEnd(4),
+    'TEAM TOTALS'.padEnd(20),
+    '—'.padEnd(5),
+    String(totals.goals).padEnd(4),
+    String(totals.assists).padEnd(4),
+    String(totals.shots).padEnd(4),
+    String(totals.sot).padEnd(5),
+    String(totals.passOk).padEnd(5),
+    String(totals.passFail).padEnd(5),
+    totalPassAcc.padEnd(6),
+    String(totals.fouls).padEnd(6),
+    String(totals.yc).padEnd(4),
+    String(totals.rc).padEnd(4),
+    String(totals.intercept).padEnd(5),
+    String(totals.turnover).padEnd(6),
+    String(totals.offside),
+  ].join(''));
+
+  lines.push('');
+  lines.push('───────────────────────────────────────────────────');
+  lines.push('EVENT LOG');
+  lines.push('───────────────────────────────────────────────────');
+  state.events.forEach(ev => {
+    lines.push(`${String(ev.minute+"'").padEnd(5)} ${ev.playerName.padEnd(20)} ${ev.type}`);
+  });
+
+  lines.push('');
+  lines.push('═══════════════════════════════════════════════════');
+  lines.push('Generated by PitchStat');
+  lines.push('═══════════════════════════════════════════════════');
+
+  const blob = new Blob([lines.join('\n')], { type: 'text/plain' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `PitchStat_${state.myTeam}_vs_${state.oppTeam}_${new Date().toISOString().slice(0,10)}.txt`;
+  a.click();
+  showToast('Stats exported as .txt');
+}
+
+// ══════════════════════════════════════
+//  SCREEN NAVIGATION
+// ══════════════════════════════════════
+function showScreen(name) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(`screen-${name}`).classList.add('active');
+}
+
+// ══════════════════════════════════════
+//  TOAST
+// ══════════════════════════════════════
+function showToast(msg, warn = false) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'show' + (warn ? ' warn' : '');
+  clearTimeout(t._timeout);
+  t._timeout = setTimeout(() => { t.className = ''; }, 3000);
+}
+
+// ══════════════════════════════════════
+//  RESET
+// ══════════════════════════════════════
+function resetAll() {
+  clearInterval(state.timerInterval);
+  Object.assign(state, {
+    myTeam:'Team', oppTeam:'Opponent',
+    goals:{my:0,opp:0}, half:1, matchFinished:false,
+    timerRunning:false, timerSeconds:0, timerInterval:null,
+    pitchPlayers:[], benchPlayers:[], events:[],
+    playerTime:{}, passesMy:0, passesOpp:0,
+    selectedPlayer:null, selectedX:0, selectedY:0,
+  });
+  document.getElementById('match-clock').textContent = '00:00';
+  document.getElementById('score-display').textContent = '— : —';
+  document.getElementById('btn-start-pause').textContent = '▶ Start';
+  document.querySelector('[onclick="requestHalfTime()"]').style.display = 'inline-flex';
+  document.getElementById('btn-finish').style.display = 'none';
+  document.getElementById('half-badge').textContent = '1st Half';
+  document.getElementById('event-log').innerHTML = '';
+  benchCount = 0;
+  document.getElementById('bench-list').innerHTML = '';
+  initSetup();
+  showScreen('setup');
+}
+
+// ══════════════════════════════════════
+//  RESIZE: re-render tokens on window resize
+// ══════════════════════════════════════
+let resizeTimer;
+window.addEventListener('resize', () => {
+  clearTimeout(resizeTimer);
+  resizeTimer = setTimeout(() => {
+    if (document.getElementById('screen-match').classList.contains('active')) {
+      renderTokens();
+    }
+  }, 150);
+});
+</script>
+</body>
+</html>
